@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Graphious</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <!-- Le styles -->
+    <link href="bootstrap/css/bootstrap.css" rel="stylesheet">
+    <style type="text/css">
+      body {
+        padding-top: 60px;
+        padding-bottom: 40px;
+        
+      }
+      div#canvas {
+            min-height:1000px;
+            height:100%;
+            border: 1px dashed #003399;
+
+      }
+      div#stats {
+            margin-left: 0;
+            padding-left: 19px;
+            border-left: 1px solid #eee;
+            height: 100%;
+            min-height: 1000px;
+        }
+
+      div#graphstats {
+          background-color: lightblue;
+          padding: 2em;
+
+      }
+      div#nodestats {
+          background-color: lightgreen;
+          padding:2em;
+      }
+
+    </style>
+    <link href="bootstrap/css/bootstrap-responsive.css" rel="stylesheet">
+
+    <!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="bootstrap/js/html5shiv.js"></script>
+    <![endif]-->
+
+    <!-- Fav and touch icons -->
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="bootstrap/ico/apple-touch-icon-144-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="bootstrap/ico/apple-touch-icon-114-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="bootstrap/ico/apple-touch-icon-72-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" href="bootstrap/ico/apple-touch-icon-57-precomposed.png">
+    <link rel="shortcut icon" href="bootstrap/ico/favicon.png">
+    <script src="bootstrap/js/jquery.js"></script>
+    <!--<script src="http://d3js.org/d3.v3.min.js"></script>-->
+    <script src="d3.v3.js"></script>
+    <script src="jsnetworkx.js"></script>
+    <script src="distance_measures.js"></script>
+
+  </head>
+  
+  <body>
+  
+      <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+
+          <a class="navbar-brand" href="#">Graphious</a>
+          <div class="navbar-collapse collapse">
+            <ul class="nav navbar-nav">
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">File <b class="caret"></b></a>
+                    <ul class="dropdown-menu">
+                      <li><a href="#">New</a></li>
+                      <li><a href="#">Open</a></li>
+                      <li><a href="#">Save</a></li>
+                      <li><a href="#">Save as</a></li>
+                      <li class="divider"></li>
+                      <li><a href="#">Exit</a></li>
+                    </ul>
+                </li>
+                <li><a href="#about">About</a></li>
+                <li><a href="#contact">Contact</a></li>
+
+            </ul>
+            <form class="navbar-form pull-right">
+              <input class="input-sm" type="text" placeholder="Email">
+              <input class="input-sm" type="password" placeholder="Password">
+              <button type="submit" class="btn btn-sm">Sign in</button>
+            </form>
+          </div><!--/.navbar-collapse -->
+        </div>
+      </div>
+    </div>
+
+
+  <div class="container">
+    <div class="row">
+        <div class="col-md-9" id="canvas">
+        </div>
+        <div class="col-md-3" id="stats">
+            <div class="panel panel-default">
+                <div class="panel-heading">Generators</div>
+                <div class="panel-body">
+
+                    <button name="add_node" class="btn btn-default" onclick="javascript:add_node();">Add Node</button>
+
+                    <button name="add_node" class="btn btn-default" onclick="javascript:add_nodes();">Add Nodes</button>
+                    <button name="add_edge" class="btn btn-default" onclick="javascript:add_edge();">Add Edge</button>
+
+                    <button name="add_node" class="btn btn-default" onclick="javascript:add_star_graph();">Star Graph</button>
+                    <button name="add_node" class="btn btn-default" onclick="javascript:add_complete_graph();">Complete
+                        Graph
+                    </button>
+
+                </div>
+            </div>
+            <div class="panel panel-default">
+                <div class="panel-heading">Graph Stats</div>
+                <div class="panel-body">
+                    <table class="table">
+
+                        <tr><td># of nodes:</td><td><span id="num_nodes">0</span></td></tr>
+                        <tr><td># of edges:</td><td><span id="num_edges">0</span></td></tr>
+                        <tr><td>Diameter:</td><td><span id="diameter">0</span></td></tr>
+                        <tr><td>Radius:</td><td><span id="radius">0</span></td></tr>
+                        <tr><td>Average Path Length:</td><td><span id="avg_path_length">-</span></td></tr>
+                        <tr><td>Center:</td><td><span id="center">-</span></td></tr>
+                        <tr><td>Periphery:</td><td><span id="periphery">-</span></td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h3 class="panel-title">Node Stats</h3>
+                </div>
+                <div class="panel-body">
+                    <table class="table">
+                        <tr><td>Eccentricity:</td><td><span id="eccentricity">-</span></td></tr>
+                        <tr><td>Label:</td><td><span id="label">-</span></td></tr>
+                        <tr><td>Betweenness:</td><td><span id="betweenness">-</span></td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+  </div>
+      <script type="text/javascript">
+        var betweenness_centrality;
+        function update_stats(){
+            $("span#num_nodes").html(G.number_of_nodes());
+            $("span#num_edges").html(G.number_of_edges());
+            $("span#diameter").html(diameter(G));
+            $("span#radius").html(radius(G));
+            $("span#center").html(center(G).join());
+            $("span#periphery").html(periphery(G).join());
+            $("span#avg_path_length").html(average_shortest_path_length(G));
+            betweenness_centrality = jsnx.betweenness_centrality(G, {weight: null, normalized: false});
+        }
+
+        function update_node_stats(node){
+            $("span#label").html(JSON.stringify(node));
+            $("span#eccentricity").html(JSON.stringify(eccentricity(G, node)));
+            $("span#betweenness").html(betweenness_centrality.D[node.toString()]);
+        }
+
+        var G = jsnx.Graph();
+     
+        //G.add_weighted_edges_from([[2,3,10]]);
+        //G.add_star([3,4,5,6], {weight: 5});
+        //G.add_star([2,1,0,-1], {weight: 3});
+        //G.add_nodes_from([1,2,3,4,5], {'color': "#00ff22"});
+        //G.add_edges_from([[1,2], [2,3], [3,4], [4,5]])
+         
+
+        
+        update_stats();
+        
+        
+    // helper method to find and style SVG node elements
+    function highlight_nodes(nodes, on) {
+        nodes.forEach(function(n) {
+            d3.select('#node-' + n).style('fill', function(d) {
+                return on ? '#EEE' : d.data.color;
+            });
+        });
+    }
+
+    // bind event handlers
+    d3.selectAll('.node').on('mouseover', function(d) {
+        highlight_nodes(d.G.neighbors(d.node).concat(d.node), true);
+    });
+
+    d3.selectAll('.node').on('mouseout', function(d) {
+        highlight_nodes(d.G.neighbors(d.node).concat(d.node), false);
+    });
+
+    function select_node(d, selected){
+        console.log(selected);
+        update_node_stats(d.node);
+        //d.setAttribute('stroke', '#ff0000')
+        selected.style({'stroke-opacity': 0.4, 'stroke-dasharray': "5,5"});
+
+    }
+
+    var last_click = null;
+    var last_selected = null;
+        var timer;
+        var clickedOnce = false;
+
+    function run_on_simple_click(d, selected) {
+        select_node(d, selected);
+        console.log("clickeed");
+        clickedOnce = false;
+    }
+
+    function run_on_double_click(d) {
+        clickedOnce = false;
+        clearTimeout(timer);
+        d3.event.preventDefault();
+
+        console.log(d);
+        //var point = d3.mouse(this);
+        if (last_click === null) {
+            last_click = d.node;
+            console.log("last click:" + last_click);
+        } else {
+            G.add_edge(last_click, d.node);
+            last_click = null;
+            console.log("last click:" + last_click);
+            update();
+            update_stats();
+        }
+    }
+
+    function update(){
+
+        jsnx.draw(G, {
+        element: '#canvas',
+        with_labels: true,
+        node_style: {
+             fill: "#00ff22",
+        },
+        'layout_attr': { 'charge': -120, 'linkDistance': 40 },
+        node_attr: {
+            r: 15,
+            title: function(d) { return d.label;},
+            id: function(d) {
+                return 'node-' + d.node;
+            },
+            color: "#00ff22"
+
+        },
+        weighted: true,
+        edge_style: {
+        'stroke-width': 5
+        }
+        });
+
+
+        update_stats();
+
+
+
+        //var nodes = d3.selectAll(".node");
+        d3.selectAll('.node').on('click', function (d) {
+            d3.event.preventDefault();
+            if (last_selected != null) {
+                last_selected.attr("style", ""); //"border: 1px solid #ffffff");
+                //last_selected.attr("stroke-opacity", 1.0);
+            }
+            //d3.select(this).attr("stroke", function(d) { return d3.rgb(d.color).darker(2); });
+            last_selected = d3.select(this);
+            console.log("last new:");
+            console.log(last_selected);
+            select_node(d, d3.select(this));
+
+
+            /*
+            if (clickedOnce) {
+                //run_on_double_click(d);
+            } else {
+                if (last_selected != null){
+                    last_selected.attr("stroke", null);
+                }
+                d3.select(this).attr("stroke", "#ff0000");
+                last_selected = d3.select(this);
+                timer = setTimeout(function () {
+
+                    //run_on_simple_click(d, d3.select(this));
+
+                }, 1500);
+                clickedOnce = true;
+            }
+            */
+
+        });
+    }
+
+    update();
+    function add_node(){
+        var label = prompt("Enter the label for the new node:");
+        G.add_node(label);
+        update();
+    }
+    function add_nodes(){
+        var num = prompt("How many nodes?");
+        num = parseInt(num);
+        for (var i=1; i<=num; i++){
+            G.add_node(i);
+        }
+        update();
+    }
+
+    function add_edge(){
+        var from = parseInt(prompt("From node:"));
+        var to = parseInt(prompt("To node:"));
+        G.add_edge(from, to);
+        update();
+    }
+    
+    function add_complete_graph() {
+        var num = prompt("How many nodes?");
+        num = parseInt(num);
+        G = jsnx.complete_graph(num);
+        update();
+    }
+    function add_star_graph() {
+        var num = prompt("How many nodes?");
+        num = parseInt(num);
+        G = star_graph(num);
+        update();
+    }
+    /*
+    console.log('Returned:' + eccentricity(G, G.nodes()[0]));
+    console.log('Returned below:');
+    console.log(eccentricity(G));
+    console.log('Diameter:');
+    console.log(diameter(G));
+    console.log('Periphery:');
+    console.log(periphery(G));
+    console.log('Radius:');
+    console.log(radius(G));
+    console.log('Center:');
+    console.log(center(G));*/
+
+
+    </script>
+
+
+  <!-- Le javascript
+================================================== -->
+  <!-- Placed at the end of the document so the pages load faster -->
+  <script src="bootstrap/js/bootstrap.min.js"></script>
+  </body>
+
+
+</html>
